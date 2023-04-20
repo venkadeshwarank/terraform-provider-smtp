@@ -74,7 +74,7 @@ func (p *smtpProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp 
 	}
 }
 
-// Configure prepares a HashiCups API client for data sources and resources.
+// Configure prepares a SMTP client for data sources and resources.
 func (p *smtpProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	tflog.Info(ctx, "Configuring SMTP client")
 
@@ -93,8 +93,8 @@ func (p *smtpProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 		resp.Diagnostics.AddAttributeError(
 			path.Root("host"),
 			"Unknown SMTP Host",
-			"The provider cannot create the HashiCups API client as there is an unknown configuration value for the HashiCups API host. "+
-				"Either target apply the source of the value first, set the value statically in the configuration, or use the HASHICUPS_HOST environment variable.",
+			"The provider cannot connect to SMTP as there is an unknown configuration value for the SMTP host. "+
+				"Either target apply the source of the value first, set the value statically in the configuration, or use the SMTP_HOST environment variable.",
 		)
 	}
 
@@ -102,26 +102,26 @@ func (p *smtpProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 		resp.Diagnostics.AddAttributeError(
 			path.Root("port"),
 			"Unknown SMTP port",
-			"The provider cannot create the HashiCups API client as there is an unknown configuration value for the HashiCups API host. "+
-				"Either target apply the source of the value first, set the value statically in the configuration, or use the HASHICUPS_HOST environment variable.",
+			"The provider cannot create the SMTP client as there is an unknown configuration value for the SMTP port. "+
+				"Either target apply the source of the value first, set the value statically in the configuration, or use the SMTP_PASSWORD environment variable.",
 		)
 	}
 
 	if config.Username.IsUnknown() {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("username"),
-			"Unknown HashiCups API Username",
-			"The provider cannot create the HashiCups API client as there is an unknown configuration value for the HashiCups API username. "+
-				"Either target apply the source of the value first, set the value statically in the configuration, or use the HASHICUPS_USERNAME environment variable.",
+			"Unknown SMTP Username",
+			"The provider cannot create the SMTP client as there is an unknown configuration value for the SMTP username. "+
+				"Either target apply the source of the value first, set the value statically in the configuration, or use the SMTP_USERNAME environment variable.",
 		)
 	}
 
 	if config.Password.IsUnknown() {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("password"),
-			"Unknown HashiCups API Password",
-			"The provider cannot create the HashiCups API client as there is an unknown configuration value for the HashiCups API password. "+
-				"Either target apply the source of the value first, set the value statically in the configuration, or use the HASHICUPS_PASSWORD environment variable.",
+			"Unknown SMTP Password",
+			"The provider cannot create the SMTP client as there is an unknown configuration value for the SMTP password. "+
+				"Either target apply the source of the value first, set the value statically in the configuration, or use the SMTP_PASSWORD environment variable.",
 		)
 	}
 
@@ -158,9 +158,9 @@ func (p *smtpProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 	if host == "" {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("host"),
-			"Missing HashiCups API Host",
-			"The provider cannot create the HashiCups API client as there is a missing or empty value for the HashiCups API host. "+
-				"Set the host value in the configuration or use the HASHICUPS_HOST environment variable. "+
+			"Missing SMTP Host",
+			"The provider cannot create the SMTP client as there is a missing or empty value for the SMTP host. "+
+				"Set the host value in the configuration or use the SMTP_HOST environment variable. "+
 				"If either is already set, ensure the value is not empty.",
 		)
 	}
@@ -168,17 +168,17 @@ func (p *smtpProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 		resp.Diagnostics.AddAttributeError(
 			path.Root("port"),
 			"Missing SMTP host port",
-			"The provider cannot create the HashiCups API client as there is a missing or empty value for the HashiCups API host. "+
-				"Set the host value in the configuration or use the HASHICUPS_HOST environment variable. "+
+			"The provider cannot create the SMTP client as there is a missing or empty value for the SMTP port. "+
+				"Set the host value in the configuration or use the SMTP_PORT environment variable. "+
 				"If either is already set, ensure the value is not empty.",
 		)
 	}
 	if username == "" {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("username"),
-			"Missing HashiCups API Username",
-			"The provider cannot create the HashiCups API client as there is a missing or empty value for the HashiCups API username. "+
-				"Set the username value in the configuration or use the HASHICUPS_USERNAME environment variable. "+
+			"Missing SMTP Username",
+			"The provider cannot create the SMTP client as there is a missing or empty value for the SMTP username. "+
+				"Set the username value in the configuration or use the SMTP_USERNAME environment variable. "+
 				"If either is already set, ensure the value is not empty.",
 		)
 	}
@@ -186,9 +186,9 @@ func (p *smtpProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 	if password == "" {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("password"),
-			"Missing HashiCups API Password",
-			"The provider cannot create the HashiCups API client as there is a missing or empty value for the HashiCups API password. "+
-				"Set the password value in the configuration or use the HASHICUPS_PASSWORD environment variable. "+
+			"Missing SMTP Password",
+			"The provider cannot create the SMTP client as there is a missing or empty value for the SMTP password. "+
+				"Set the password value in the configuration or use the SMTP_PASSWORD environment variable. "+
 				"If either is already set, ensure the value is not empty.",
 		)
 	}
@@ -203,9 +203,9 @@ func (p *smtpProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 	ctx = tflog.SetField(ctx, "smtp_password", password)
 	ctx = tflog.MaskFieldValuesWithFieldKeys(ctx, "smtp_password")
 
-	tflog.Debug(ctx, "Creating HashiCups client")
+	tflog.Debug(ctx, "Creating SMTP client")
 
-	// Create a new HashiCups client using the configuration values
+	// Create a new SMTP client using the configuration values
 	auth := smtp.PlainAuth("", username, password, host)
 
 	client := &client{
@@ -215,7 +215,7 @@ func (p *smtpProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 		auth: auth,
 	}
 
-	// Make the HashiCups client available during DataSource and Resource
+	// Make the SMTP client available during DataSource and Resource
 	// type Configure methods.
 	resp.DataSourceData = client
 	resp.ResourceData = client
