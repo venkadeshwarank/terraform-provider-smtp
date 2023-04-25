@@ -28,11 +28,14 @@ resource "smtp_send_mail" "this" {
 
 - `body` (String) Body of the email.
 - `subject` (String) Subject of the email.
-- `to` (String) To email address. At this moment only one email id is supported. Multi recipient, cc and bcc are not supported.
+- `to` (List of String) To email addresses.
 
 ### Optional
 
+- `bcc` (List of String) BCC email addresses.
+- `cc` (List of String) CC email addresses.
 - `from` (String) From email address. If not provided, the username used in the smtp auth will be used.
+- `render_html` (Boolean) Boolean flag is identify whether the body is html or plain text. Set this to `true` if body is a HTML content.
 
 ### Read-Only
 
