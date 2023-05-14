@@ -237,17 +237,21 @@ func (r *sendMailResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	// Upgrade the connection to TLS.
-	err = conn.StartTLS(&tls.Config{ServerName: host_port, InsecureSkipVerify: true})
-	if err != nil {
-		resp.Diagnostics.AddError("Error upgrading connection to TLS:", err.Error())
-		return
+	if r.client.auth != nil {
+		err = conn.StartTLS(&tls.Config{ServerName: host_port, InsecureSkipVerify: true})
+		if err != nil {
+			resp.Diagnostics.AddError("Error upgrading connection to TLS:", err.Error())
+			return
+		}
 	}
 
 	// Authenticate with the SMTP server.
-	err = conn.Auth(r.client.auth)
-	if err != nil {
-		resp.Diagnostics.AddError("Error authenticating with SMTP server:", err.Error())
-		return
+	if r.client.auth != nil {
+		err = conn.Auth(r.client.auth)
+		if err != nil {
+			resp.Diagnostics.AddError("Error authenticating with SMTP server:", err.Error())
+			return
+		}
 	}
 
 	// Set the sender and recipient addresses, and the email message.
