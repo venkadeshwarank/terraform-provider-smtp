@@ -65,7 +65,7 @@ func (p *smtpProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp 
 			},
 			"authentication": schema.BoolAttribute{
 				Optional:    true,
-				Description: "Enable or Disable the authentication with SMTP. May also be provided via SMTP_AUTHENTICATION environment variable.",
+				Description: "Enable or Disable the authentication with SMTP (by default, it sets to 'true'). May also be provided via SMTP_AUTHENTICATION environment variable.",
 			},
 			"username": schema.StringAttribute{
 				Optional:    true,

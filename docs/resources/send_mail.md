@@ -3,12 +3,12 @@
 page_title: "smtp_send_mail Resource - smtp"
 subcategory: ""
 description: |-
-  Send a email with smtp. Note: At this moment authentication-less access to smtp and TLS validation is not support.
+  Send a email with smtp. Note: At this moment TLS validation is not support.
 ---
 
 # smtp_send_mail (Resource)
 
-Send a email with smtp. Note: At this moment authentication-less access to smtp and TLS validation is not support.
+Send a email with smtp. Note: At this moment TLS validation is not support.
 
 ## Example Usage
 
