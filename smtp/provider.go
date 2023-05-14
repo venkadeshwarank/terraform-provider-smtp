@@ -39,10 +39,10 @@ type client struct {
 type smtpProviderModel struct {
 	Host types.String `tfsdk:"host"`
 	// TODO: Convert the port to number
-	Port             types.String `tfsdk:"port"`
-	Authentification types.Bool   `tfsdk:"authentification"`
-	Username         types.String `tfsdk:"username"`
-	Password         types.String `tfsdk:"password"`
+	Port           types.String `tfsdk:"port"`
+	Authentication types.Bool   `tfsdk:"authentication"`
+	Username       types.String `tfsdk:"username"`
+	Password       types.String `tfsdk:"password"`
 }
 
 // Metadata returns the provider type name.
@@ -63,9 +63,9 @@ func (p *smtpProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp 
 				Optional:    true,
 				Description: "SMTP host port. eg: 25. May also be provided via SMTP_PORT environment variable.",
 			},
-			"authentification": schema.BoolAttribute{
+			"authentication": schema.BoolAttribute{
 				Optional:    true,
-				Description: "Enable or Disable the authentication with SMTP. May also be provided via SMTP_AUTHENTIFICATION environment variable.",
+				Description: "Enable or Disable the authentication with SMTP. May also be provided via SMTP_AUTHENTICATION environment variable.",
 			},
 			"username": schema.StringAttribute{
 				Optional:    true,
@@ -113,11 +113,11 @@ func (p *smtpProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 		)
 	}
 
-	if config.Authentification.IsUnknown() {
-		config.Authentification = basetypes.NewBoolValue(true)
+	if config.Authentication.IsUnknown() {
+		config.Authentication = basetypes.NewBoolValue(true)
 	}
 
-	if config.Authentification.ValueBool() && config.Username.IsUnknown() {
+	if config.Authentication.ValueBool() && config.Username.IsUnknown() {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("username"),
 			"Unknown SMTP Username",
@@ -126,7 +126,7 @@ func (p *smtpProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 		)
 	}
 
-	if config.Authentification.ValueBool() && config.Password.IsUnknown() {
+	if config.Authentication.ValueBool() && config.Password.IsUnknown() {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("password"),
 			"Unknown SMTP Password",
@@ -147,9 +147,9 @@ func (p *smtpProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 	username := os.Getenv("SMTP_USERNAME")
 	password := os.Getenv("SMTP_PASSWORD")
 
-	authentification, err := strconv.ParseBool(os.Getenv("SMTP_AUTHENTIFICATION"))
+	authentication, err := strconv.ParseBool(os.Getenv("SMTP_AUTHENTICATION"))
 	if err != nil {
-		authentification = true
+		authentication = true
 	}
 
 	if !config.Host.IsNull() {
@@ -159,8 +159,8 @@ func (p *smtpProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 		port = config.Port.ValueString()
 	}
 
-	if !config.Authentification.IsNull() {
-		authentification = config.Authentification.ValueBool()
+	if !config.Authentication.IsNull() {
+		authentication = config.Authentication.ValueBool()
 	}
 
 	if !config.Username.IsNull() {
@@ -192,7 +192,7 @@ func (p *smtpProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 				"If either is already set, ensure the value is not empty.",
 		)
 	}
-	if authentification && username == "" {
+	if authentication && username == "" {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("username"),
 			"Missing SMTP Username",
@@ -202,7 +202,7 @@ func (p *smtpProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 		)
 	}
 
-	if authentification && password == "" {
+	if authentication && password == "" {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("password"),
 			"Missing SMTP Password",
@@ -218,7 +218,7 @@ func (p *smtpProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 
 	ctx = tflog.SetField(ctx, "smtp_host", host)
 	ctx = tflog.SetField(ctx, "smtp_port", port)
-	ctx = tflog.SetField(ctx, "smtp_authentification", authentification)
+	ctx = tflog.SetField(ctx, "smtp_authentication", authentication)
 	ctx = tflog.SetField(ctx, "smtp_username", username)
 	ctx = tflog.SetField(ctx, "smtp_password", password)
 	ctx = tflog.MaskFieldValuesWithFieldKeys(ctx, "smtp_password")
@@ -227,7 +227,7 @@ func (p *smtpProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 
 	// Create a new SMTP client using the configuration values
 	auth := smtp.Auth(nil)
-	if authentification {
+	if authentication {
 		auth = smtp.PlainAuth("", username, password, host)
 	}
 
