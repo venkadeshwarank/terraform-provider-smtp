@@ -2,9 +2,9 @@ package smtp
 
 import (
 	"context"
-	"os"
 	"net/smtp"
-
+	"os"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
@@ -36,11 +37,12 @@ type client struct {
 
 // smtpProviderModel maps provider schema data to a Go type.
 type smtpProviderModel struct {
-	Host     types.String `tfsdk:"host"`
+	Host types.String `tfsdk:"host"`
 	// TODO: Convert the port to number
-	Port     types.String `tfsdk:"port"`
-	Username types.String `tfsdk:"username"`
-	Password types.String `tfsdk:"password"`
+	Port           types.String `tfsdk:"port"`
+	Authentication types.Bool   `tfsdk:"authentication"`
+	Username       types.String `tfsdk:"username"`
+	Password       types.String `tfsdk:"password"`
 }
 
 // Metadata returns the provider type name.
@@ -54,20 +56,24 @@ func (p *smtpProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp 
 		Description: "Interact with SMTP.",
 		Attributes: map[string]schema.Attribute{
 			"host": schema.StringAttribute{
-				Optional: true,
+				Optional:    true,
 				Description: "SMTP host domain. eg. smtp.example.com. May also be provided via SMTP_HOST environment variable.",
 			},
 			"port": schema.StringAttribute{
-				Optional: true,
+				Optional:    true,
 				Description: "SMTP host port. eg: 25. May also be provided via SMTP_PORT environment variable.",
 			},
+			"authentication": schema.BoolAttribute{
+				Optional:    true,
+				Description: "Enable or Disable the authentication with SMTP (by default, it sets to 'true'). May also be provided via SMTP_AUTHENTICATION environment variable.",
+			},
 			"username": schema.StringAttribute{
-				Optional: true,
+				Optional:    true,
 				Description: "User name to authenticate with SMTP. May also be provided via SMTP_USERNAME environment variable.",
 			},
 			"password": schema.StringAttribute{
-				Optional:  true,
-				Sensitive: true,
+				Optional:    true,
+				Sensitive:   true,
 				Description: "Password to authenticate with SMTP. May also be provided via SMTP_PASSWORD environment variable.",
 			},
 		},
@@ -107,7 +113,11 @@ func (p *smtpProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 		)
 	}
 
-	if config.Username.IsUnknown() {
+	if config.Authentication.IsUnknown() {
+		config.Authentication = basetypes.NewBoolValue(true)
+	}
+
+	if config.Authentication.ValueBool() && config.Username.IsUnknown() {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("username"),
 			"Unknown SMTP Username",
@@ -116,7 +126,7 @@ func (p *smtpProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 		)
 	}
 
-	if config.Password.IsUnknown() {
+	if config.Authentication.ValueBool() && config.Password.IsUnknown() {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("password"),
 			"Unknown SMTP Password",
@@ -136,7 +146,11 @@ func (p *smtpProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 	port := os.Getenv("SMTP_PORT")
 	username := os.Getenv("SMTP_USERNAME")
 	password := os.Getenv("SMTP_PASSWORD")
-	
+
+	authentication, err := strconv.ParseBool(os.Getenv("SMTP_AUTHENTICATION"))
+	if err != nil {
+		authentication = true
+	}
 
 	if !config.Host.IsNull() {
 		host = config.Host.ValueString()
@@ -144,6 +158,11 @@ func (p *smtpProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 	if !config.Port.IsNull() {
 		port = config.Port.ValueString()
 	}
+
+	if !config.Authentication.IsNull() {
+		authentication = config.Authentication.ValueBool()
+	}
+
 	if !config.Username.IsNull() {
 		username = config.Username.ValueString()
 	}
@@ -173,7 +192,7 @@ func (p *smtpProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 				"If either is already set, ensure the value is not empty.",
 		)
 	}
-	if username == "" {
+	if authentication && username == "" {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("username"),
 			"Missing SMTP Username",
@@ -183,7 +202,7 @@ func (p *smtpProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 		)
 	}
 
-	if password == "" {
+	if authentication && password == "" {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("password"),
 			"Missing SMTP Password",
@@ -199,6 +218,7 @@ func (p *smtpProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 
 	ctx = tflog.SetField(ctx, "smtp_host", host)
 	ctx = tflog.SetField(ctx, "smtp_port", port)
+	ctx = tflog.SetField(ctx, "smtp_authentication", authentication)
 	ctx = tflog.SetField(ctx, "smtp_username", username)
 	ctx = tflog.SetField(ctx, "smtp_password", password)
 	ctx = tflog.MaskFieldValuesWithFieldKeys(ctx, "smtp_password")
@@ -206,13 +226,16 @@ func (p *smtpProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 	tflog.Debug(ctx, "Creating SMTP client")
 
 	// Create a new SMTP client using the configuration values
-	auth := smtp.PlainAuth("", username, password, host)
+	auth := smtp.Auth(nil)
+	if authentication {
+		auth = smtp.PlainAuth("", username, password, host)
+	}
 
 	client := &client{
 		host:     host,
 		port:     port,
 		username: username,
-		auth: auth,
+		auth:     auth,
 	}
 
 	// Make the SMTP client available during DataSource and Resource
@@ -230,7 +253,7 @@ func (p *smtpProvider) DataSources(_ context.Context) []func() datasource.DataSo
 
 // Resources defines the resources implemented in the provider.
 func (p *smtpProvider) Resources(_ context.Context) []func() resource.Resource {
-    return []func() resource.Resource{
-        NewSendMailResource,
-    }
+	return []func() resource.Resource{
+		NewSendMailResource,
+	}
 }
