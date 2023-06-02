@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/smtp"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -180,7 +181,9 @@ func (r *sendMailResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 	for _, addr := range receivers {
-		err = conn.Rcpt(addr.String())
+		var receiver, _ = strconv.Unquote(addr.String())
+		tflog.Debug(ctx, "Receiver: "+receiver)
+		err = conn.Rcpt(receiver)
 		if err != nil {
 			resp.Diagnostics.AddError("Error setting recipient address:", err.Error())
 			return
@@ -284,7 +287,9 @@ func (r *sendMailResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	for _, addr := range receivers {
-		err = conn.Rcpt(addr.String())
+		var receiver, _ = strconv.Unquote(addr.String())
+		tflog.Debug(ctx, "Receiver: "+receiver)
+		err = conn.Rcpt(receiver)
 		if err != nil {
 			resp.Diagnostics.AddError("Error setting recipient address:", err.Error())
 			return
