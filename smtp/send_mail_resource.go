@@ -126,9 +126,9 @@ func (r *sendMailResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	host_port := r.client.host + ":" + r.client.port
+	hostPort := r.client.host + ":" + r.client.port
 	// Connect to the SMTP server using a plain TCP connection.
-	conn, err := smtp.Dial(host_port)
+	conn, err := smtp.Dial(hostPort)
 	if err != nil {
 		resp.Diagnostics.AddError("Error connecting to SMTP server:", err.Error())
 		return
@@ -136,7 +136,7 @@ func (r *sendMailResource) Create(ctx context.Context, req resource.CreateReques
 
 	// Upgrade the connection to TLS.
 	if r.client.auth != nil {
-		err = conn.StartTLS(&tls.Config{ServerName: host_port, InsecureSkipVerify: true})
+		err = conn.StartTLS(&tls.Config{ServerName: hostPort, InsecureSkipVerify: true})
 		if err != nil {
 			resp.Diagnostics.AddError("Error upgrading connection to TLS:", err.Error())
 			return
@@ -202,6 +202,7 @@ func (r *sendMailResource) Create(ctx context.Context, req resource.CreateReques
 	err = w.Close()
 	if err != nil {
 		resp.Diagnostics.AddError("Error sending email:", err.Error())
+		resp.Diagnostics.AddError("Email body:", string(msg[:]))
 		return
 	}
 
@@ -231,9 +232,9 @@ func (r *sendMailResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	host_port := r.client.host + ":" + r.client.port
+	hostPort := r.client.host + ":" + r.client.port
 	// Connect to the SMTP server using a plain TCP connection.
-	conn, err := smtp.Dial(host_port)
+	conn, err := smtp.Dial(hostPort)
 	if err != nil {
 		resp.Diagnostics.AddError("Error connecting to SMTP server:", err.Error())
 		return
@@ -241,7 +242,7 @@ func (r *sendMailResource) Update(ctx context.Context, req resource.UpdateReques
 
 	// Upgrade the connection to TLS.
 	if r.client.auth != nil {
-		err = conn.StartTLS(&tls.Config{ServerName: host_port, InsecureSkipVerify: true})
+		err = conn.StartTLS(&tls.Config{ServerName: hostPort, InsecureSkipVerify: true})
 		if err != nil {
 			resp.Diagnostics.AddError("Error upgrading connection to TLS:", err.Error())
 			return
@@ -346,9 +347,10 @@ func uniqueAttrValue(arr []attr.Value) []attr.Value {
 
 // Convert the array of attr.Value to  array of string.
 func asStringList(arr []attr.Value) []string {
-	result := []string{}
+	var result []string
 	for _, i := range arr {
-		result = append(result, i.String())
+		unquotedString, _ := strconv.Unquote(i.String())
+		result = append(result, unquotedString)
 	}
 	return result
 }
