@@ -202,7 +202,6 @@ func (r *sendMailResource) Create(ctx context.Context, req resource.CreateReques
 	err = w.Close()
 	if err != nil {
 		resp.Diagnostics.AddError("Error sending email:", err.Error())
-		resp.Diagnostics.AddError("Email body:", string(msg[:]))
 		return
 	}
 
