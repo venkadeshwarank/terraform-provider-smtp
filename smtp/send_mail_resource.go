@@ -167,7 +167,8 @@ func (r *sendMailResource) Create(ctx context.Context, req resource.CreateReques
 	receivers := append(plan.To.Elements(), plan.Cc.Elements()...)
 	receivers = append(receivers, plan.Bcc.Elements()...)
 	receivers = uniqueAttrValue(receivers)
-	msg := []byte("To: " + strings.Join(asStringList(plan.To.Elements()), ", ") + "\r\n" +
+	msg := []byte("From: " + plan.From.ValueString() + "\r\n" +
+		"To: " + strings.Join(asStringList(plan.To.Elements()), ", ") + "\r\n" +
 		"Cc: " + strings.Join(asStringList(plan.Cc.Elements()), ", ") + "\r\n" +
 		"Subject: " + plan.Subject.ValueString() + "\r\n" +
 		mime +
